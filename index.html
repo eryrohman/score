@@ -289,33 +289,53 @@
             new QRCode(document.getElementById("qrcode"), { text: adminUrl, width: 140, height: 140 });
         });
 
+       function initPeer() {
+    peer = new Peer(roomId);
+
+    peer.on('open', (id) => {
+        document.getElementById('peer-id-display').innerText = id;
+        
+        // --- PERBAIKAN URL QR CODE ---
+        // Mengambil URL lengkap dari origin & path lokasi file saat ini
+        const currentPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        const adminUrl = window.location.origin + currentPath + 'admin.html?room=' + id;
+
+        // Render QR Code dengan URL Absolut LENGKAP
+        document.getElementById('qrcode').innerHTML = "";
+        new QRCode(document.getElementById("qrcode"), { 
+            text: adminUrl, 
+            width: 160, 
+            height: 160,
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        console.log("Link QR Admin:", adminUrl); // Untuk verifikasi di console
+    });
+
         peer.on('connection', (conn) => {
             currentConn = conn;
             
-            // Sembunyikan overlay ketika terhubung
             document.getElementById('pair-overlay').style.display = 'none';
             document.getElementById('conn-status').innerText = "Admin Terhubung";
             document.getElementById('conn-status').className = "status-badge status-online";
-
+    
             conn.on('data', (data) => {
                 renderScoreboard(data);
             });
-
-            // Deteksi ketika koneksi terputus
+    
             conn.on('close', () => {
                 handleDisconnect();
             });
-
+    
             conn.on('error', () => {
                 handleDisconnect();
             });
         });
-
-        // Jika koneksi server PeerJS sendiri yang terputus (misal RTM/Sinyal Internet Hilang Sejenak)
+    
         peer.on('disconnected', () => {
             document.getElementById('conn-status').innerText = "Menghubungkan Ulang Server...";
             document.getElementById('conn-status').className = "status-badge status-offline";
-            peer.reconnect(); // Otomatis re-connect ke signaling server
+            peer.reconnect();
         });
     }
 
