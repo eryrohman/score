@@ -56,13 +56,37 @@
             overflow: hidden;
         }
 
-        #pair-overlay {
+        #pair-overlay, #fullscreen-prompt {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: var(--overlay-bg);
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
             z-index: 1000;
+        }
+
+        #fullscreen-prompt {
+            display: none;
+            background: rgba(0, 0, 0, 0.85);
+            cursor: pointer;
+        }
+
+        .prompt-btn {
+            background: #238636;
+            color: white;
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border: 2px solid #3fb950;
+            box-shadow: 0 0 20px rgba(63, 185, 80, 0.5);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
 
         .qr-box {
@@ -150,7 +174,6 @@
         .set-box h3 { font-size: 0.8rem; color: var(--text-sub); letter-spacing: 1px; }
         .set-box .val { font-size: 3rem; font-weight: 800; color: var(--text-main); }
 
-        /* History Table Log */
         .history-card {
             background: var(--card-bg); border: 1px solid var(--card-border);
             border-radius: 12px; padding: 10px; width: 100%; max-height: 200px;
@@ -170,11 +193,17 @@
 </head>
 <body>
 
+    <!-- Overlay Pairing -->
     <div id="pair-overlay">
         <h2>Pindai / Masukkan Kode untuk Hubungkan Remote</h2>
         <div class="qr-box" id="qrcode"></div>
         <p>Atau masukkan <b>KODE ROOM</b> di HP Admin:</p>
         <div class="code-display" id="peer-id-display">MENGHUBUNGKAN...</div>
+    </div>
+
+    <!-- Overlay Konfirmasi Fullscreen dari Remote -->
+    <div id="fullscreen-prompt" onclick="activateFullscreen()">
+        <div class="prompt-btn">🖥️ Klik Layar untuk Fullscreen</div>
     </div>
 
     <div class="top-status">
@@ -207,7 +236,6 @@
                 <div class="val" id="current-set">1</div>
             </div>
 
-            <!-- History Skor per Set -->
             <div class="history-card">
                 <div style="font-weight: bold; margin-bottom: 5px; color: var(--text-sub);">RIWAYAT SET</div>
                 <table class="history-table">
@@ -218,9 +246,7 @@
                             <th>B</th>
                         </tr>
                     </thead>
-                    <tbody id="history-list">
-                        <!-- Iterasi History -->
-                    </tbody>
+                    <tbody id="history-list"></tbody>
                 </table>
             </div>
         </div>
@@ -294,12 +320,15 @@
 
             if (data.theme) document.documentElement.setAttribute('data-theme', data.theme);
 
-            // Command Remote Fullscreen dari Admin
+            // Trigger Panggilan Fullscreen dari Remote
             if (data.action === 'toggle_fullscreen') {
-                toggleFullscreen();
+                if (!document.fullscreenElement) {
+                    document.getElementById('fullscreen-prompt').style.display = 'flex';
+                } else {
+                    document.exitFullscreen().catch(() => {});
+                }
             }
 
-            // Render Tabel Riwayat
             const tbody = document.getElementById('history-list');
             tbody.innerHTML = "";
             if (data.history && data.history.length > 0) {
@@ -309,6 +338,14 @@
                     tbody.appendChild(tr);
                 });
             }
+        }
+
+        function activateFullscreen() {
+            document.documentElement.requestFullscreen().then(() => {
+                document.getElementById('fullscreen-prompt').style.display = 'none';
+            }).catch(() => {
+                document.getElementById('fullscreen-prompt').style.display = 'none';
+            });
         }
 
         function toggleTheme() {
