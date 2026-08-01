@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Panel Remote Admin</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d1117">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117; --card-bg: #161b22;
+            --btn-blue: #1f6feb; --btn-green: #238636;
+            --btn-red: #da3633; --text-color: #f0f6fc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; touch-action: manipulation; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+        .card { background: var(--card-bg); border: 1px solid #30363d; border-radius: 12px; padding: 12px; }
+        .connect-box { display: flex; gap: 8px; }
+        
+        input[type="text"] {
+            flex: 1; background: #21262d; border: 1px solid #30363d;
+            color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;
+        }
+
+        button { border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; padding: 10px; font-size: 0.95rem; }
+        .btn-main { background: var(--btn-blue); }
+        .btn-add { background: var(--btn-green); font-size: 1.8rem; padding: 12px; }
+        .btn-sub { background: #30363d; font-size: 1.1rem; }
+        .btn-serve { background: #d97706; }
+        .btn-action { background: #21262d; border: 1px solid #30363d; }
+
+        .team-control { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .team-box { display: flex; flex-direction: column; gap: 8px; background: #0d1117; padding: 10px; border-radius: 10px; border: 1px solid #30363d; }
+        .score-preview { font-size: 2.8rem; text-align: center; font-weight: bold; color: #f1e05a; }
+        
+        .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; background: var(--btn-red); }
+        .status-dot.active { background: #3fb950; }
+
+        .upload-btn { background: #21262d; border: 1px dashed #58a6ff; color: #58a6ff; text-align: center; padding: 6px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
+        .upload-btn input { display: none; }
+
+        .history-list { font-size: 0.8rem; margin-top: 5px; }
+        .history-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #30363d; }
+    </style>
+</head>
+<body>
+
+    <!-- Panel Koneksi Remote -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 0.8rem; color: #8b949e;">Status Remote:</span>
+            <div><span class="status-dot" id="dot"></span> <span id="status-text" style="font-size: 0.8rem;">Terputus</span></div>
+        </div>
+        <div class="connect-box">
+            <input type="text" id="room-code" placeholder="KODE ROOM (VOLI-XXXX)">
+            <button class="btn-main" onclick="connectToScreen()">Sambungkan</button>
+        </div>
+    </div>
+
+    <!-- Modul Remote TV Controls -->
+    <div class="card" style="display: flex; gap: 8px;">
+        <button class="btn-action" style="flex: 1;" onclick="triggerRemoteFullscreen()">🖥️ Remote Fullscreen TV</button>
+        <button class="btn-action" style="flex: 1;" onclick="toggleTheme()">☀️/🌙 Ubah Tema TV</button>
+    </div>
+
+    <!-- Control Skor & Logo Tim -->
+    <div class="team-control">
+        <!-- Tim A -->
+        <div class="team-box">
+            <input type="text" id="name-a" value="TIM A" onchange="sendState()">
+            <label class="upload-btn">
+                🖼️ Upload Logo A
+                <input type="file" accept="image/*" onchange="handleLogoUpload(event, 'A')">
+            </label>
+            <div class="score-preview" id="preview-score-a">0</div>
+            <button class="btn-add" onclick="addScore('A')">+1</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                <button class="btn-sub" onclick="subScore('A')">-1</button>
+                <button class="btn-serve" onclick="setServe('A')">Servis</button>
+            </div>
+            <div style="text-align: center; margin-top: 4px; font-weight: bold; font-size: 0.85rem;">Set Won: <span id="preview-set-a">0</span></div>
+        </div>
+
+        <!-- Tim B -->
+        <div class="team-box">
+            <input type="text" id="name-b" value="TIM B" onchange="sendState()">
+            <label class="upload-btn">
+                🖼️ Upload Logo B
+                <input type="file" accept="image/*" onchange="handleLogoUpload(event, 'B')">
+            </label>
+            <div class="score-preview" id="preview-score-b">0</div>
+            <button class="btn-add" onclick="addScore('B')">+1</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                <button class="btn-sub" onclick="subScore('B')">-1</button>
+                <button class="btn-serve" onclick="setServe('B')">Servis</button>
+            </div>
+            <div style="text-align: center; margin-top: 4px; font-weight: bold; font-size: 0.85rem;">Set Won: <span id="preview-set-b">0</span></div>
+        </div>
+    </div>
+
+    <!-- Selesaikan Set & Riwayat -->
+    <div class="card" style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn-main" style="background: var(--btn-green); padding: 12px;" onclick="finishSet()">Selesaikan Set Ini (Simpan Skor)</button>
+        <button class="btn-action" onclick="swapTeams()">🔀 Tukar Lapangan (Sisi)</button>
+        <button class="btn-action" style="color: var(--btn-red);" onclick="resetMatch()">🔄 Reset Match Baru</button>
+    </div>
+
+    <!-- Riwayat Skor Internal Admin -->
+    <div class="card">
+        <div style="font-size: 0.85rem; color: #8b949e; margin-bottom: 5px;">Riwayat Set Tersimpan:</div>
+        <div id="admin-history-list" class="history-list">
+            <i>Belum ada set yang diselesaikan.</i>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+
+        let peer, conn;
+        let state = {
+            teamA: "TIM A", teamB: "TIM B",
+            logoA: "https://cdn-icons-png.flaticon.com/512/523/523681.png",
+            logoB: "https://cdn-icons-png.flaticon.com/512/523/523681.png",
+            scoreA: 0, scoreB: 0, setsA: 0, setsB: 0,
+            currentSet: 1, serve: 'A', theme: 'dark',
+            history: [], action: null
+        };
+
+        window.onload = () => {
+            peer = new Peer();
+            const roomParam = new URLSearchParams(window.location.search).get('room');
+            if (roomParam) {
+                document.getElementById('room-code').value = roomParam;
+                setTimeout(() => connectToScreen(), 1000);
+            }
+        };
+
+        function connectToScreen() {
+            const code = document.getElementById('room-code').value.trim();
+            if (!code) return alert("Masukkan Kode Room!");
+
+            conn = peer.connect(code);
+
+            conn.on('open', () => {
+                document.getElementById('dot').className = "status-dot active";
+                document.getElementById('status-text').innerText = "Terhubung";
+                sendState();
+            });
+
+            conn.on('close', () => {
+                document.getElementById('dot').className = "status-dot";
+                document.getElementById('status-text').innerText = "Terputus";
+            });
+        }
+
+        function triggerRemoteFullscreen() {
+            state.action = 'toggle_fullscreen';
+            sendState();
+            state.action = null; // Reset action flag
+        }
+
+        function toggleTheme() {
+            state.theme = state.theme === 'dark' ? 'light' : 'dark';
+            sendState();
+        }
+
+        function handleLogoUpload(event, team) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (team === 'A') state.logoA = e.target.result;
+                    else state.logoB = e.target.result;
+                    sendState();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function sendState() {
+            state.teamA = document.getElementById('name-a').value.toUpperCase();
+            state.teamB = document.getElementById('name-b').value.toUpperCase();
+
+            document.getElementById('preview-score-a').innerText = state.scoreA;
+            document.getElementById('preview-score-b').innerText = state.scoreB;
+            document.getElementById('preview-set-a').innerText = state.setsA;
+            document.getElementById('preview-set-b').innerText = state.setsB;
+
+            // Render History ke Admin
+            const histDiv = document.getElementById('admin-history-list');
+            if (state.history.length > 0) {
+                histDiv.innerHTML = state.history.map(h => 
+                    `<div class="history-item"><span><b>Set ${h.set}:</b> ${state.teamA} (${h.scoreA}) vs (${h.scoreB}) ${state.teamB}</span></div>`
+                ).join('');
+            } else {
+                histDiv.innerHTML = "<i>Belum ada set tersimpan.</i>";
+            }
+
+            if (conn && conn.open) conn.send(state);
+        }
+
+        function addScore(team) {
+            if (team === 'A') state.scoreA++; else state.scoreB++;
+            state.serve = team;
+            sendState();
+        }
+
+        function subScore(team) {
+            if (team === 'A' && state.scoreA > 0) state.scoreA--;
+            if (team === 'B' && state.scoreB > 0) state.scoreB--;
+            sendState();
+        }
+
+        function setServe(team) { state.serve = team; sendState(); }
+
+        function finishSet() {
+            // Simpan ke Riwayat
+            state.history.push({
+                set: state.currentSet,
+                scoreA: state.scoreA,
+                scoreB: state.scoreB
+            });
+
+            if (state.scoreA > state.scoreB) state.setsA++;
+            else if (state.scoreB > state.scoreA) state.setsB++;
+
+            state.scoreA = 0; state.scoreB = 0;
+            state.currentSet++;
+            sendState();
+        }
+
+        function swapTeams() {
+            let tempName = state.teamA; state.teamA = state.teamB; state.teamB = tempName;
+            let tempScore = state.scoreA; state.scoreA = state.scoreB; state.scoreB = tempScore;
+            let tempSets = state.setsA; state.setsA = state.setsB; state.setsB = tempSets;
+            let tempLogo = state.logoA; state.logoA = state.logoB; state.logoB = tempLogo;
+
+            document.getElementById('name-a').value = state.teamA;
+            document.getElementById('name-b').value = state.teamB;
+
+            state.serve = state.serve === 'A' ? 'B' : 'A';
+            sendState();
+        }
+
+        function resetMatch() {
+            if (confirm("Reset seluruh skor dan riwayat pertandingan?")) {
+                state.scoreA = 0; state.scoreB = 0;
+                state.setsA = 0; state.setsB = 0;
+                state.currentSet = 1; state.serve = 'A';
+                state.history = [];
+                sendState();
+            }
+        }
+    </script>
+</body>
+</html>
