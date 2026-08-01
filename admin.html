@@ -322,20 +322,20 @@
     }
 
     function sendState() {
-        state.teamA = document.getElementById('name-a').value.toUpperCase() || "TIM A";
-        state.teamB = document.getElementById('name-b').value.toUpperCase() || "TIM B";
+        state.teamA = document.getElementById('name-a').value.trim().toUpperCase() || "TIM A";
+        state.teamB = document.getElementById('name-b').value.trim().toUpperCase() || "TIM B";
     
         document.getElementById('preview-score-a').innerText = state.scoreA;
         document.getElementById('preview-score-b').innerText = state.scoreB;
         document.getElementById('preview-set-a').innerText = state.setsA;
         document.getElementById('preview-set-b').innerText = state.setsB;
     
-        // --- UPDATE PANEL RIWAYAT DENGAN NAMA TIM BERDASARKAN ISIAN ---
+        // --- RENDER RIWAYAT DENGAN NAMA TIM MENGGANTIKAN HURUF A & B ---
         const histDiv = document.getElementById('admin-history-list');
         if (state.history.length > 0) {
             histDiv.innerHTML = state.history.map(h => 
-                `<div class="history-item" style="padding: 6px; border-bottom: 1px solid #ccc; margin-bottom: 4px;">
-                    <span><b>Set ${h.set}:</b> ${state.teamA} (<b>${h.scoreA}</b>) - (<b>${h.scoreB}</b>) ${state.teamB}</span>
+                `<div class="history-item" style="padding: 6px 0; border-bottom: 1px solid #eee;">
+                    <span><b>Set ${h.set}:</b> ${state.teamA} (<b>${h.scoreA}</b>) vs (<b>${h.scoreB}</b>) ${state.teamB}</span>
                 </div>`
             ).join('');
         } else {
@@ -347,6 +347,7 @@
         }
     }
 
+    
     function addScore(team) {
         if (team === 'A') state.scoreA++; else state.scoreB++;
         state.serve = team;
