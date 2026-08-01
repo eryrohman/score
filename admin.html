@@ -1,355 +1,184 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Panel Remote Admin</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0d1117">
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <style>
-        :root {
-            --bg-color: #0d1117; 
-            --card-bg: #161b22;
-            --card-border: #30363d;
-            --btn-blue: #1f6feb; 
-            --btn-green: #238636;
-            --btn-red: #da3633; 
-            --text-color: #f0f6fc;
-        }
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
 
-        * { 
-            box-sizing: border-box; 
-            margin: 0; 
-            padding: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            touch-action: manipulation; 
-        }
+    let peer = null;
+    let conn = null;
+    let reconnectInterval = null;
 
-        body { 
-            background-color: var(--bg-color); 
-            color: var(--text-color); 
-            padding: 10px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
+    let state = {
+        teamA: "TIM A", teamB: "TIM B",
+        logoA: "https://cdn-icons-png.flaticon.com/512/523/523681.png",
+        logoB: "https://cdn-icons-png.flaticon.com/512/523/523681.png",
+        scoreA: 0, scoreB: 0, setsA: 0, setsB: 0,
+        currentSet: 1, serve: 'A', theme: 'dark',
+        history: [], action: null
+    };
 
-        .card { 
-            background: var(--card-bg); 
-            border: 1px solid var(--card-border); 
-            border-radius: 12px; 
-            padding: 12px; 
-            width: 100%;
+    window.onload = () => {
+        initPeerAdmin();
+        const roomParam = new URLSearchParams(window.location.search).get('room');
+        if (roomParam) {
+            document.getElementById('room-code').value = roomParam;
+            setTimeout(() => connectToScreen(), 1000);
         }
+    };
 
-        .connect-box { display: flex; gap: 8px; width: 100%; }
+    function initPeerAdmin() {
+        peer = new Peer();
+
+        peer.on('disconnected', () => {
+            peer.reconnect();
+        });
+    }
+
+    function connectToScreen() {
+        const code = document.getElementById('room-code').value.trim();
+        if (!code) return alert("Masukkan Kode Room!");
+
+        document.getElementById('status-text').innerText = "Menghubungkan...";
         
-        input[type="text"] {
-            flex: 1; 
-            background: #21262d; 
-            border: 1px solid var(--card-border);
-            color: white; 
-            padding: 10px; 
-            border-radius: 8px; 
-            text-align: center; 
-            font-weight: bold;
-            font-size: 0.9rem;
-            min-width: 0; /* Mencegah overflow pada flexbox */
+        if (conn) {
+            conn.close();
         }
 
-        button { 
-            border: none; 
-            border-radius: 8px; 
-            font-weight: bold; 
-            color: white; 
-            cursor: pointer; 
-            padding: 12px 10px; 
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 5px;
-        }
+        conn = peer.connect(code);
 
-        .btn-main { background: var(--btn-blue); }
-        .btn-add { background: var(--btn-green); font-size: 2rem; padding: 15px 0; }
-        .btn-sub { background: #21262d; border: 1px solid var(--card-border); font-size: 1.1rem; }
-        .btn-serve { background: #d97706; }
-        .btn-action { background: #21262d; border: 1px solid var(--card-border); width: 100%; }
-
-        .team-control { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 10px; 
-            width: 100%;
-        }
-
-        .team-box { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
-            background: #0d1117; 
-            padding: 10px; 
-            border-radius: 10px; 
-            border: 1px solid var(--card-border); 
-            min-width: 0;
-        }
-
-        .score-preview { 
-            font-size: 3rem; 
-            text-align: center; 
-            font-weight: 900; 
-            color: #f1e05a; 
-            line-height: 1;
-            margin: 5px 0;
-        }
-        
-        .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; background: var(--btn-red); }
-        .status-dot.active { background: #3fb950; }
-
-        .upload-btn { 
-            background: #21262d; 
-            border: 1px dashed #58a6ff; 
-            color: #58a6ff; 
-            text-align: center; 
-            padding: 8px 4px; 
-            border-radius: 6px; 
-            font-size: 0.75rem; 
-            cursor: pointer; 
-            display: block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .upload-btn input { display: none; }
-
-        .history-list { font-size: 0.8rem; margin-top: 5px; }
-        .history-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--card-border); }
-
-        /* Media Queries untuk HP Layar Kecil */
-        @media (max-width: 360px) {
-            body { padding: 6px; gap: 6px; }
-            .team-control { gap: 6px; }
-            .team-box { padding: 6px; }
-            .score-preview { font-size: 2.2rem; }
-            button { font-size: 0.8rem; padding: 8px 5px; }
-        }
-    </style>
-</head>
-<body>
-
-    <!-- Panel Connection -->
-    <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 0.8rem; color: #8b949e;">Status Remote:</span>
-            <div><span class="status-dot" id="dot"></span> <span id="status-text" style="font-size: 0.8rem;">Terputus</span></div>
-        </div>
-        <div class="connect-box">
-            <input type="text" id="room-code" placeholder="KODE ROOM">
-            <button class="btn-main" onclick="connectToScreen()">Connect</button>
-        </div>
-    </div>
-
-    <!-- Modul Remote TV Controls -->
-    <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-        <button class="btn-action" onclick="triggerRemoteFullscreen()">🖥️ Remote FS</button>
-        <button class="btn-action" onclick="toggleTheme()">☀️/🌙 Tema</button>
-    </div>
-
-    <!-- Control Skor & Logo Tim -->
-    <div class="team-control">
-        <!-- Tim A -->
-        <div class="team-box">
-            <input type="text" id="name-a" value="TIM A" onchange="sendState()">
-            <label class="upload-btn">
-                🖼️ Logo A
-                <input type="file" accept="image/*" onchange="handleLogoUpload(event, 'A')">
-            </label>
-            <div class="score-preview" id="preview-score-a">0</div>
-            <button class="btn-add" onclick="addScore('A')">+1</button>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                <button class="btn-sub" onclick="subScore('A')">-1</button>
-                <button class="btn-serve" onclick="setServe('A')">Servis</button>
-            </div>
-            <div style="text-align: center; margin-top: 4px; font-weight: bold; font-size: 0.8rem; color: #8b949e;">Set Won: <span id="preview-set-a" style="color: white;">0</span></div>
-        </div>
-
-        <!-- Tim B -->
-        <div class="team-box">
-            <input type="text" id="name-b" value="TIM B" onchange="sendState()">
-            <label class="upload-btn">
-                🖼️ Logo B
-                <input type="file" accept="image/*" onchange="handleLogoUpload(event, 'B')">
-            </label>
-            <div class="score-preview" id="preview-score-b">0</div>
-            <button class="btn-add" onclick="addScore('B')">+1</button>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                <button class="btn-sub" onclick="subScore('B')">-1</button>
-                <button class="btn-serve" onclick="setServe('B')">Servis</button>
-            </div>
-            <div style="text-align: center; margin-top: 4px; font-weight: bold; font-size: 0.8rem; color: #8b949e;">Set Won: <span id="preview-set-b" style="color: white;">0</span></div>
-        </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="card" style="display: flex; flex-direction: column; gap: 8px;">
-        <button class="btn-main" style="background: var(--btn-green);" onclick="finishSet()">Selesaikan Set Ini</button>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <button class="btn-action" onclick="swapTeams()">🔀 Tukar Lapangan</button>
-            <button class="btn-action" style="color: var(--btn-red);" onclick="resetMatch()">🔄 Reset Match</button>
-        </div>
-    </div>
-
-    <!-- Riwayat Set Admin -->
-    <div class="card">
-        <div style="font-size: 0.8rem; color: #8b949e; margin-bottom: 4px;">Riwayat Set Tersimpan:</div>
-        <div id="admin-history-list" class="history-list">
-            <i>Belum ada set yang diselesaikan.</i>
-        </div>
-    </div>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
-        }
-
-        let peer, conn;
-        let state = {
-            teamA: "TIM A", teamB: "TIM B",
-            logoA: "https://cdn-icons-png.flaticon.com/512/523/523681.png",
-            logoB: "https://cdn-icons-png.flaticon.com/512/523/523681.png",
-            scoreA: 0, scoreB: 0, setsA: 0, setsB: 0,
-            currentSet: 1, serve: 'A', theme: 'dark',
-            history: [], action: null
-        };
-
-        window.onload = () => {
-            peer = new Peer();
-            const roomParam = new URLSearchParams(window.location.search).get('room');
-            if (roomParam) {
-                document.getElementById('room-code').value = roomParam;
-                setTimeout(() => connectToScreen(), 1000);
+        conn.on('open', () => {
+            // Hentikan timer mencoba menyambung ulang jika berhasil
+            if (reconnectInterval) {
+                clearInterval(reconnectInterval);
+                reconnectInterval = null;
             }
-        };
 
-        function connectToScreen() {
-            const code = document.getElementById('room-code').value.trim();
-            if (!code) return alert("Masukkan Kode Room!");
+            document.getElementById('dot').className = "status-dot active";
+            document.getElementById('status-text').innerText = "Terhubungkan";
+            
+            // Kirim ulang state terakhir ke layar agar ter-sinkronisasi instan
+            sendState();
+        });
 
-            conn = peer.connect(code);
+        conn.on('close', () => {
+            handleAdminDisconnect();
+        });
 
-            conn.on('open', () => {
-                document.getElementById('dot').className = "status-dot active";
-                document.getElementById('status-text').innerText = "Terhubung";
+        conn.on('error', () => {
+            handleAdminDisconnect();
+        });
+    }
+
+    function handleAdminDisconnect() {
+        document.getElementById('dot').className = "status-dot";
+        document.getElementById('status-text').innerText = "Terputus (Mencoba ulang...)";
+
+        // Coba koneksi ulang otomatis setiap 3 detik tanpa refresh halaman
+        if (!reconnectInterval) {
+            reconnectInterval = setInterval(() => {
+                const code = document.getElementById('room-code').value.trim();
+                if (code && (!conn || !conn.open)) {
+                    connectToScreen();
+                }
+            }, 3000);
+        }
+    }
+
+    function triggerRemoteFullscreen() {
+        state.action = 'toggle_fullscreen';
+        sendState();
+        state.action = null;
+    }
+
+    function toggleTheme() {
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        sendState();
+    }
+
+    function handleLogoUpload(event, team) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (team === 'A') state.logoA = e.target.result;
+                else state.logoB = e.target.result;
                 sendState();
-            });
+            };
+            reader.readAsDataURL(file);
+        }
+    }
 
-            conn.on('close', () => {
-                document.getElementById('dot').className = "status-dot";
-                document.getElementById('status-text').innerText = "Terputus";
-            });
+    function sendState() {
+        state.teamA = document.getElementById('name-a').value.toUpperCase();
+        state.teamB = document.getElementById('name-b').value.toUpperCase();
+
+        document.getElementById('preview-score-a').innerText = state.scoreA;
+        document.getElementById('preview-score-b').innerText = state.scoreB;
+        document.getElementById('preview-set-a').innerText = state.setsA;
+        document.getElementById('preview-set-b').innerText = state.setsB;
+
+        const histDiv = document.getElementById('admin-history-list');
+        if (state.history.length > 0) {
+            histDiv.innerHTML = state.history.map(h => 
+                `<div class="history-item"><span><b>Set ${h.set}:</b> ${state.teamA} (${h.scoreA}) - (${h.scoreB}) ${state.teamB}</span></div>`
+            ).join('');
+        } else {
+            histDiv.innerHTML = "<i>Belum ada set tersimpan.</i>";
         }
 
-        function triggerRemoteFullscreen() {
-            state.action = 'toggle_fullscreen';
-            sendState();
-            state.action = null;
+        if (conn && conn.open) {
+            conn.send(state);
         }
+    }
 
-        function toggleTheme() {
-            state.theme = state.theme === 'dark' ? 'light' : 'dark';
-            sendState();
-        }
+    function addScore(team) {
+        if (team === 'A') state.scoreA++; else state.scoreB++;
+        state.serve = team;
+        sendState();
+    }
 
-        function handleLogoUpload(event, team) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    if (team === 'A') state.logoA = e.target.result;
-                    else state.logoB = e.target.result;
-                    sendState();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+    function subScore(team) {
+        if (team === 'A' && state.scoreA > 0) state.scoreA--;
+        if (team === 'B' && state.scoreB > 0) state.scoreB--;
+        sendState();
+    }
 
-        function sendState() {
-            state.teamA = document.getElementById('name-a').value.toUpperCase();
-            state.teamB = document.getElementById('name-b').value.toUpperCase();
+    function setServe(team) { state.serve = team; sendState(); }
 
-            document.getElementById('preview-score-a').innerText = state.scoreA;
-            document.getElementById('preview-score-b').innerText = state.scoreB;
-            document.getElementById('preview-set-a').innerText = state.setsA;
-            document.getElementById('preview-set-b').innerText = state.setsB;
+    function finishSet() {
+        state.history.push({
+            set: state.currentSet,
+            scoreA: state.scoreA,
+            scoreB: state.scoreB
+        });
 
-            const histDiv = document.getElementById('admin-history-list');
-            if (state.history.length > 0) {
-                histDiv.innerHTML = state.history.map(h => 
-                    `<div class="history-item"><span><b>Set ${h.set}:</b> ${state.teamA} (${h.scoreA}) - (${h.scoreB}) ${state.teamB}</span></div>`
-                ).join('');
-            } else {
-                histDiv.innerHTML = "<i>Belum ada set tersimpan.</i>";
-            }
+        if (state.scoreA > state.scoreB) state.setsA++;
+        else if (state.scoreB > state.scoreA) state.setsB++;
 
-            if (conn && conn.open) conn.send(state);
-        }
+        state.scoreA = 0; state.scoreB = 0;
+        state.currentSet++;
+        sendState();
+    }
 
-        function addScore(team) {
-            if (team === 'A') state.scoreA++; else state.scoreB++;
-            state.serve = team;
-            sendState();
-        }
+    function swapTeams() {
+        let tempName = state.teamA; state.teamA = state.teamB; state.teamB = tempName;
+        let tempScore = state.scoreA; state.scoreA = state.scoreB; state.scoreB = tempScore;
+        let tempSets = state.setsA; state.setsA = state.setsB; state.setsB = tempSets;
+        let tempLogo = state.logoA; state.logoA = state.logoB; state.logoB = tempLogo;
 
-        function subScore(team) {
-            if (team === 'A' && state.scoreA > 0) state.scoreA--;
-            if (team === 'B' && state.scoreB > 0) state.scoreB--;
-            sendState();
-        }
+        document.getElementById('name-a').value = state.teamA;
+        document.getElementById('name-b').value = state.teamB;
 
-        function setServe(team) { state.serve = team; sendState(); }
+        state.serve = state.serve === 'A' ? 'B' : 'A';
+        sendState();
+    }
 
-        function finishSet() {
-            state.history.push({
-                set: state.currentSet,
-                scoreA: state.scoreA,
-                scoreB: state.scoreB
-            });
-
-            if (state.scoreA > state.scoreB) state.setsA++;
-            else if (state.scoreB > state.scoreA) state.setsB++;
-
+    function resetMatch() {
+        if (confirm("Reset seluruh skor dan riwayat pertandingan?")) {
             state.scoreA = 0; state.scoreB = 0;
-            state.currentSet++;
+            state.setsA = 0; state.setsB = 0;
+            state.currentSet = 1; state.serve = 'A';
+            state.history = [];
             sendState();
         }
-
-        function swapTeams() {
-            let tempName = state.teamA; state.teamA = state.teamB; state.teamB = tempName;
-            let tempScore = state.scoreA; state.scoreA = state.scoreB; state.scoreB = tempScore;
-            let tempSets = state.setsA; state.setsA = state.setsB; state.setsB = tempSets;
-            let tempLogo = state.logoA; state.logoA = state.logoB; state.logoB = tempLogo;
-
-            document.getElementById('name-a').value = state.teamA;
-            document.getElementById('name-b').value = state.teamB;
-
-            state.serve = state.serve === 'A' ? 'B' : 'A';
-            sendState();
-        }
-
-        function resetMatch() {
-            if (confirm("Reset seluruh skor dan riwayat pertandingan?")) {
-                state.scoreA = 0; state.scoreB = 0;
-                state.setsA = 0; state.setsB = 0;
-                state.currentSet = 1; state.serve = 'A';
-                state.history = [];
-                sendState();
-            }
-        }
-    </script>
-</body>
-</html>
+    }
+</script>
