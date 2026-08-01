@@ -10,60 +10,154 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
-            --bg-color: #0d1117; --card-bg: #161b22;
-            --btn-blue: #1f6feb; --btn-green: #238636;
-            --btn-red: #da3633; --text-color: #f0f6fc;
+            --bg-color: #0d1117; 
+            --card-bg: #161b22;
+            --card-border: #30363d;
+            --btn-blue: #1f6feb; 
+            --btn-green: #238636;
+            --btn-red: #da3633; 
+            --text-color: #f0f6fc;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; touch-action: manipulation; }
-        body { background-color: var(--bg-color); color: var(--text-color); padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-        .card { background: var(--card-bg); border: 1px solid #30363d; border-radius: 12px; padding: 12px; }
-        .connect-box { display: flex; gap: 8px; }
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            touch-action: manipulation; 
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            padding: 10px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--card-border); 
+            border-radius: 12px; 
+            padding: 12px; 
+            width: 100%;
+        }
+
+        .connect-box { display: flex; gap: 8px; width: 100%; }
         
         input[type="text"] {
-            flex: 1; background: #21262d; border: 1px solid #30363d;
-            color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;
+            flex: 1; 
+            background: #21262d; 
+            border: 1px solid var(--card-border);
+            color: white; 
+            padding: 10px; 
+            border-radius: 8px; 
+            text-align: center; 
+            font-weight: bold;
+            font-size: 0.9rem;
+            min-width: 0; /* Mencegah overflow pada flexbox */
         }
 
-        button { border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; padding: 10px; font-size: 0.95rem; }
-        .btn-main { background: var(--btn-blue); }
-        .btn-add { background: var(--btn-green); font-size: 1.8rem; padding: 12px; }
-        .btn-sub { background: #30363d; font-size: 1.1rem; }
-        .btn-serve { background: #d97706; }
-        .btn-action { background: #21262d; border: 1px solid #30363d; }
+        button { 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            color: white; 
+            cursor: pointer; 
+            padding: 12px 10px; 
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
 
-        .team-control { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .team-box { display: flex; flex-direction: column; gap: 8px; background: #0d1117; padding: 10px; border-radius: 10px; border: 1px solid #30363d; }
-        .score-preview { font-size: 2.8rem; text-align: center; font-weight: bold; color: #f1e05a; }
+        .btn-main { background: var(--btn-blue); }
+        .btn-add { background: var(--btn-green); font-size: 2rem; padding: 15px 0; }
+        .btn-sub { background: #21262d; border: 1px solid var(--card-border); font-size: 1.1rem; }
+        .btn-serve { background: #d97706; }
+        .btn-action { background: #21262d; border: 1px solid var(--card-border); width: 100%; }
+
+        .team-control { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px; 
+            width: 100%;
+        }
+
+        .team-box { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            background: #0d1117; 
+            padding: 10px; 
+            border-radius: 10px; 
+            border: 1px solid var(--card-border); 
+            min-width: 0;
+        }
+
+        .score-preview { 
+            font-size: 3rem; 
+            text-align: center; 
+            font-weight: 900; 
+            color: #f1e05a; 
+            line-height: 1;
+            margin: 5px 0;
+        }
         
         .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; background: var(--btn-red); }
         .status-dot.active { background: #3fb950; }
 
-        .upload-btn { background: #21262d; border: 1px dashed #58a6ff; color: #58a6ff; text-align: center; padding: 6px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
+        .upload-btn { 
+            background: #21262d; 
+            border: 1px dashed #58a6ff; 
+            color: #58a6ff; 
+            text-align: center; 
+            padding: 8px 4px; 
+            border-radius: 6px; 
+            font-size: 0.75rem; 
+            cursor: pointer; 
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .upload-btn input { display: none; }
 
         .history-list { font-size: 0.8rem; margin-top: 5px; }
-        .history-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #30363d; }
+        .history-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--card-border); }
+
+        /* Media Queries untuk HP Layar Kecil */
+        @media (max-width: 360px) {
+            body { padding: 6px; gap: 6px; }
+            .team-control { gap: 6px; }
+            .team-box { padding: 6px; }
+            .score-preview { font-size: 2.2rem; }
+            button { font-size: 0.8rem; padding: 8px 5px; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Panel Koneksi Remote -->
+    <!-- Panel Connection -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="font-size: 0.8rem; color: #8b949e;">Status Remote:</span>
             <div><span class="status-dot" id="dot"></span> <span id="status-text" style="font-size: 0.8rem;">Terputus</span></div>
         </div>
         <div class="connect-box">
-            <input type="text" id="room-code" placeholder="KODE ROOM (VOLI-XXXX)">
-            <button class="btn-main" onclick="connectToScreen()">Sambungkan</button>
+            <input type="text" id="room-code" placeholder="KODE ROOM">
+            <button class="btn-main" onclick="connectToScreen()">Connect</button>
         </div>
     </div>
 
     <!-- Modul Remote TV Controls -->
-    <div class="card" style="display: flex; gap: 8px;">
-        <button class="btn-action" style="flex: 1;" onclick="triggerRemoteFullscreen()">🖥️ Remote Fullscreen TV</button>
-        <button class="btn-action" style="flex: 1;" onclick="toggleTheme()">☀️/🌙 Ubah Tema TV</button>
+    <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <button class="btn-action" onclick="triggerRemoteFullscreen()">🖥️ Remote FS</button>
+        <button class="btn-action" onclick="toggleTheme()">☀️/🌙 Tema</button>
     </div>
 
     <!-- Control Skor & Logo Tim -->
@@ -72,7 +166,7 @@
         <div class="team-box">
             <input type="text" id="name-a" value="TIM A" onchange="sendState()">
             <label class="upload-btn">
-                🖼️ Upload Logo A
+                🖼️ Logo A
                 <input type="file" accept="image/*" onchange="handleLogoUpload(event, 'A')">
             </label>
             <div class="score-preview" id="preview-score-a">0</div>
@@ -81,14 +175,14 @@
                 <button class="btn-sub" onclick="subScore('A')">-1</button>
                 <button class="btn-serve" onclick="setServe('A')">Servis</button>
             </div>
-            <div style="text-align: center; margin-top: 4px; font-weight: bold; font-size: 0.85rem;">Set Won: <span id="preview-set-a">0</span></div>
+            <div style="text-align: center; margin-top: 4px; font-weight: bold; font-size: 0.8rem; color: #8b949e;">Set Won: <span id="preview-set-a" style="color: white;">0</span></div>
         </div>
 
         <!-- Tim B -->
         <div class="team-box">
             <input type="text" id="name-b" value="TIM B" onchange="sendState()">
             <label class="upload-btn">
-                🖼️ Upload Logo B
+                🖼️ Logo B
                 <input type="file" accept="image/*" onchange="handleLogoUpload(event, 'B')">
             </label>
             <div class="score-preview" id="preview-score-b">0</div>
@@ -97,20 +191,22 @@
                 <button class="btn-sub" onclick="subScore('B')">-1</button>
                 <button class="btn-serve" onclick="setServe('B')">Servis</button>
             </div>
-            <div style="text-align: center; margin-top: 4px; font-weight: bold; font-size: 0.85rem;">Set Won: <span id="preview-set-b">0</span></div>
+            <div style="text-align: center; margin-top: 4px; font-weight: bold; font-size: 0.8rem; color: #8b949e;">Set Won: <span id="preview-set-b" style="color: white;">0</span></div>
         </div>
     </div>
 
-    <!-- Selesaikan Set & Riwayat -->
+    <!-- Action Buttons -->
     <div class="card" style="display: flex; flex-direction: column; gap: 8px;">
-        <button class="btn-main" style="background: var(--btn-green); padding: 12px;" onclick="finishSet()">Selesaikan Set Ini (Simpan Skor)</button>
-        <button class="btn-action" onclick="swapTeams()">🔀 Tukar Lapangan (Sisi)</button>
-        <button class="btn-action" style="color: var(--btn-red);" onclick="resetMatch()">🔄 Reset Match Baru</button>
+        <button class="btn-main" style="background: var(--btn-green);" onclick="finishSet()">Selesaikan Set Ini</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <button class="btn-action" onclick="swapTeams()">🔀 Tukar Lapangan</button>
+            <button class="btn-action" style="color: var(--btn-red);" onclick="resetMatch()">🔄 Reset Match</button>
+        </div>
     </div>
 
-    <!-- Riwayat Skor Internal Admin -->
+    <!-- Riwayat Set Admin -->
     <div class="card">
-        <div style="font-size: 0.85rem; color: #8b949e; margin-bottom: 5px;">Riwayat Set Tersimpan:</div>
+        <div style="font-size: 0.8rem; color: #8b949e; margin-bottom: 4px;">Riwayat Set Tersimpan:</div>
         <div id="admin-history-list" class="history-list">
             <i>Belum ada set yang diselesaikan.</i>
         </div>
@@ -161,7 +257,7 @@
         function triggerRemoteFullscreen() {
             state.action = 'toggle_fullscreen';
             sendState();
-            state.action = null; // Reset action flag
+            state.action = null;
         }
 
         function toggleTheme() {
@@ -191,11 +287,10 @@
             document.getElementById('preview-set-a').innerText = state.setsA;
             document.getElementById('preview-set-b').innerText = state.setsB;
 
-            // Render History ke Admin
             const histDiv = document.getElementById('admin-history-list');
             if (state.history.length > 0) {
                 histDiv.innerHTML = state.history.map(h => 
-                    `<div class="history-item"><span><b>Set ${h.set}:</b> ${state.teamA} (${h.scoreA}) vs (${h.scoreB}) ${state.teamB}</span></div>`
+                    `<div class="history-item"><span><b>Set ${h.set}:</b> ${state.teamA} (${h.scoreA}) - (${h.scoreB}) ${state.teamB}</span></div>`
                 ).join('');
             } else {
                 histDiv.innerHTML = "<i>Belum ada set tersimpan.</i>";
@@ -219,7 +314,6 @@
         function setServe(team) { state.serve = team; sendState(); }
 
         function finishSet() {
-            // Simpan ke Riwayat
             state.history.push({
                 set: state.currentSet,
                 scoreA: state.scoreA,
