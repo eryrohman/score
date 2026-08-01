@@ -1,3 +1,268 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Voli - Layar Utama</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/523/523681.png">
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root[data-theme="dark"] {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --card-border: #30363d;
+            --text-main: #f0f6fc;
+            --text-sub: #8b949e;
+            --score-color: #f1e05a;
+            --team-color: #58a6ff;
+            --overlay-bg: rgba(13, 17, 23, 0.95);
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #f6f8fa;
+            --card-bg: #ffffff;
+            --card-border: #d0d7de;
+            --text-main: #1f2328;
+            --text-sub: #656d76;
+            --score-color: #d97706;
+            --team-color: #0969da;
+            --overlay-bg: rgba(246, 248, 250, 0.95);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            user-select: none;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        #pair-overlay, #fullscreen-prompt {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--overlay-bg);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+
+        #fullscreen-prompt {
+            display: none;
+            background: rgba(0, 0, 0, 0.85);
+            cursor: pointer;
+        }
+
+        .prompt-btn {
+            background: #238636;
+            color: white;
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border: 2px solid #3fb950;
+            box-shadow: 0 0 20px rgba(63, 185, 80, 0.5);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .qr-box {
+            background: white; padding: 15px;
+            border-radius: 10px; margin: 15px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .code-display {
+            font-size: 2.2rem; font-weight: bold;
+            letter-spacing: 4px; color: var(--team-color);
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            padding: 10px 25px; border-radius: 8px; margin-top: 10px;
+        }
+
+        .top-status {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); padding: 10px 20px;
+            border-radius: 12px; border: 1px solid var(--card-border);
+        }
+
+        .status-badge {
+            font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; font-weight: 600;
+        }
+        .status-online { background: rgba(46, 160, 67, 0.2); color: #2da44e; border: 1px solid #2da44e; }
+        .status-offline { background: rgba(218, 54, 51, 0.2); color: #cf222e; border: 1px solid #cf222e; }
+
+        .scoreboard {
+            display: grid; grid-template-columns: 1fr 200px 1fr; gap: 20px;
+            height: calc(100vh - 100px); align-items: center; margin-top: 10px;
+        }
+
+        .team-card {
+            background: var(--card-bg); border-radius: 20px; padding: 20px;
+            height: 100%; display: flex; flex-direction: column;
+            justify-content: space-between; align-items: center;
+            border: 1px solid var(--card-border); position: relative;
+        }
+
+        .team-header {
+            display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;
+        }
+
+        .team-logo {
+            width: 80px; height: 80px; object-fit: contain; border-radius: 50%;
+            border: 2px solid var(--card-border); background: var(--bg-color);
+        }
+
+        .team-name {
+            font-size: 2.5rem; font-weight: 800; text-transform: uppercase;
+            text-align: center; color: var(--team-color); word-break: break-word;
+        }
+
+        .serve-ball {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--bg-color); border: 2px solid var(--card-border);
+            transition: 0.3s;
+        }
+
+        .serve-ball.active {
+            background: var(--score-color); border-color: var(--score-color);
+            box-shadow: 0 0 20px var(--score-color);
+        }
+
+        .score-num {
+            font-size: 11rem; font-weight: 900; line-height: 0.85; color: var(--score-color);
+        }
+
+        .sets-badge {
+            font-size: 1.5rem; font-weight: 700; color: var(--text-sub);
+            background: var(--bg-color); padding: 6px 20px; border-radius: 30px;
+            border: 1px solid var(--card-border);
+        }
+
+        .center-info {
+            display: flex; flex-direction: column; align-items: center; gap: 10px; height: 100%;
+            justify-content: center;
+        }
+
+        .set-box {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            padding: 15px; border-radius: 15px; text-align: center; width: 100%;
+        }
+
+        .set-box h3 { font-size: 0.8rem; color: var(--text-sub); letter-spacing: 1px; }
+        .set-box .val { font-size: 3rem; font-weight: 800; color: var(--text-main); }
+
+        .history-card {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 12px; padding: 10px; width: 100%; max-height: 200px;
+            overflow-y: auto; font-size: 0.85rem; text-align: center;
+        }
+
+        .history-table { width: 100%; border-collapse: collapse; }
+        .history-table th, .history-table td { padding: 4px; border-bottom: 1px solid var(--card-border); }
+        .history-table th { color: var(--text-sub); font-weight: 600; }
+
+        .btn-ui {
+            background: var(--card-bg); color: var(--text-main);
+            border: 1px solid var(--card-border); padding: 6px 12px;
+            border-radius: 6px; cursor: pointer; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Overlay Pairing -->
+    <div id="pair-overlay">
+        <h2>Pindai / Masukkan Kode untuk Hubungkan Remote</h2>
+        <div class="qr-box" id="qrcode"></div>
+        <p>Atau masukkan <b>KODE ROOM</b> di HP Admin:</p>
+        <div class="code-display" id="peer-id-display">MENGHUBUNGKAN...</div>
+    </div>
+
+    <!-- Overlay Konfirmasi Fullscreen dari Remote -->
+    <div id="fullscreen-prompt" onclick="activateFullscreen()">
+        <div class="prompt-btn">🖥️ Klik Layar untuk Fullscreen</div>
+    </div>
+
+    <div class="top-status">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="status-badge status-offline" id="conn-status">Terputus</span>
+            <span id="wakelock-txt" style="font-size: 0.8rem; color: var(--text-sub);">Layar: Normal</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-ui" onclick="toggleTheme()">☀️ / 🌙</button>
+            <button class="btn-ui" onclick="toggleFullscreen()">🖥️ Fullscreen</button>
+        </div>
+    </div>
+
+    <div class="scoreboard">
+        <!-- Team A -->
+        <div class="team-card">
+            <div class="team-header">
+                <img id="logo-a" class="team-logo" src="https://cdn-icons-png.flaticon.com/512/523/523681.png" alt="Logo A">
+                <div class="team-name" id="display-name-a">TIM A</div>
+            </div>
+            <div class="serve-ball" id="serve-a"></div>
+            <div class="score-num" id="score-a">0</div>
+            <div class="sets-badge">SET: <span id="sets-a">0</span></div>
+        </div>
+
+        <!-- Center Panel -->
+        <div class="center-info">
+            <div class="set-box">
+                <h3>SET SAAT INI</h3>
+                <div class="val" id="current-set">1</div>
+            </div>
+
+            <div class="history-card">
+                <div style="font-weight: bold; margin-bottom: 5px; color: var(--text-sub);">RIWAYAT SET</div>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>SET</th>
+                            <th>A</th>
+                            <th>B</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Team B -->
+        <div class="team-card">
+            <div class="team-header">
+                <img id="logo-b" class="team-logo" src="https://cdn-icons-png.flaticon.com/512/523/523681.png" alt="Logo B">
+                <div class="team-name" id="display-name-b">TIM B</div>
+            </div>
+            <div class="serve-ball" id="serve-b"></div>
+            <div class="score-num" id="score-b">0</div>
+            <div class="sets-badge">SET: <span id="sets-b">0</span></div>
+        </div>
+    </div>
+
 <script>
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -128,3 +393,5 @@
         } catch (err) {}
     }
 </script>
+</body>
+</html>
