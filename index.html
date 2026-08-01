@@ -348,52 +348,69 @@ function initPeer() {
     }
 
     function renderScoreboard(data) {
-        const teamAName = data.teamA || "TIM A";
-        const teamBName = data.teamB || "TIM B";
-    
-        document.getElementById('display-name-a').innerText = teamAName;
-        document.getElementById('display-name-b').innerText = teamBName;
-        document.getElementById('score-a').innerText = data.scoreA;
-        document.getElementById('score-b').innerText = data.scoreB;
-        document.getElementById('sets-a').innerText = data.setsA;
-        document.getElementById('sets-b').innerText = data.setsB;
-        document.getElementById('current-set').innerText = data.currentSet;
-    
-        if (data.logoA) document.getElementById('logo-a').src = data.logoA;
-        if (data.logoB) document.getElementById('logo-b').src = data.logoB;
-    
-        document.getElementById('serve-a').classList.toggle('active', data.serve === 'A');
-        document.getElementById('serve-b').classList.toggle('active', data.serve === 'B');
-    
-        if (data.theme) document.documentElement.setAttribute('data-theme', data.theme);
-    
-        if (data.action === 'toggle_fullscreen') {
-            if (!document.fullscreenElement) {
-                document.getElementById('fullscreen-prompt').style.display = 'flex';
-            } else {
-                document.exitFullscreen().catch(() => {});
-            }
-        }
-    
-        // --- UPDATE RIWAYAT SET DENGAN NAMA TIM DINAMIS ---
-        const tbody = document.getElementById('history-list');
-        
-        // Perbarui header tabel riwayat jika ada elemen <thead>
-        const thead = document.querySelector('#history-table thead');
-        if (thead) {
-            thead.innerHTML = `<tr><th>Set</th><th>${teamAName}</th><th>${teamBName}</th></tr>`;
-        }
-    
-        tbody.innerHTML = "";
-        if (data.history && data.history.length > 0) {
-            data.history.forEach((h) => {
-                const tr = document.createElement('tr');
-                // Menampilkan nama tim di riwayat jika format tabel 2 kolom atau kustom
-                tr.innerHTML = `<td><b>Set ${h.set}</b></td><td>${h.scoreA}</td><td>${h.scoreB}</td>`;
-                tbody.appendChild(tr);
-            });
+    const teamAName = data.teamA || "TIM A";
+    const teamBName = data.teamB || "TIM B";
+
+    document.getElementById('display-name-a').innerText = teamAName;
+    document.getElementById('display-name-b').innerText = teamBName;
+    document.getElementById('score-a').innerText = data.scoreA;
+    document.getElementById('score-b').innerText = data.scoreB;
+    document.getElementById('sets-a').innerText = data.setsA;
+    document.getElementById('sets-b').innerText = data.setsB;
+    document.getElementById('current-set').innerText = data.currentSet;
+
+    if (data.logoA) document.getElementById('logo-a').src = data.logoA;
+    if (data.logoB) document.getElementById('logo-b').src = data.logoB;
+
+    document.getElementById('serve-a').classList.toggle('active', data.serve === 'A');
+    document.getElementById('serve-b').classList.toggle('active', data.serve === 'B');
+
+    if (data.theme) document.documentElement.setAttribute('data-theme', data.theme);
+
+    if (data.action === 'toggle_fullscreen') {
+        if (!document.fullscreenElement) {
+            document.getElementById('fullscreen-prompt').style.display = 'flex';
+        } else {
+            document.exitFullscreen().catch(() => {});
         }
     }
+
+    // --- UPDATE HEADER TABEL & RIWAYAT SET DENGAN NAMA TIM ---
+    const historyTable = document.getElementById('history-table');
+    const tbody = document.getElementById('history-list');
+
+    // Ubah Header Tabel: Kolom "A" & "B" diganti Nama Tim
+    if (historyTable) {
+        let thead = historyTable.querySelector('thead');
+        if (!thead) {
+            thead = document.createElement('thead');
+            historyTable.insertBefore(thead, historyTable.firstChild);
+        }
+        thead.innerHTML = `
+            <tr>
+                <th>SET</th>
+                <th>${teamAName}</th>
+                <th>${teamBName}</th>
+            </tr>
+        `;
+    }
+
+    // Render Baris Riwayat
+    tbody.innerHTML = "";
+    if (data.history && data.history.length > 0) {
+        data.history.forEach((h) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>Set ${h.set}</b></td>
+                <td>${h.scoreA}</td>
+                <td>${h.scoreB}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+}
+
+    
     function activateFullscreen() {
         document.documentElement.requestFullscreen().then(() => {
             document.getElementById('fullscreen-prompt').style.display = 'none';
