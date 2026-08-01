@@ -322,23 +322,26 @@
     }
 
     function sendState() {
-        state.teamA = document.getElementById('name-a').value.toUpperCase();
-        state.teamB = document.getElementById('name-b').value.toUpperCase();
-
+        state.teamA = document.getElementById('name-a').value.toUpperCase() || "TIM A";
+        state.teamB = document.getElementById('name-b').value.toUpperCase() || "TIM B";
+    
         document.getElementById('preview-score-a').innerText = state.scoreA;
         document.getElementById('preview-score-b').innerText = state.scoreB;
         document.getElementById('preview-set-a').innerText = state.setsA;
         document.getElementById('preview-set-b').innerText = state.setsB;
-
+    
+        // --- UPDATE PANEL RIWAYAT DENGAN NAMA TIM BERDASARKAN ISIAN ---
         const histDiv = document.getElementById('admin-history-list');
         if (state.history.length > 0) {
             histDiv.innerHTML = state.history.map(h => 
-                `<div class="history-item"><span><b>Set ${h.set}:</b> ${state.teamA} (${h.scoreA}) - (${h.scoreB}) ${state.teamB}</span></div>`
+                `<div class="history-item" style="padding: 6px; border-bottom: 1px solid #ccc; margin-bottom: 4px;">
+                    <span><b>Set ${h.set}:</b> ${state.teamA} (<b>${h.scoreA}</b>) - (<b>${h.scoreB}</b>) ${state.teamB}</span>
+                </div>`
             ).join('');
         } else {
             histDiv.innerHTML = "<i>Belum ada set tersimpan.</i>";
         }
-
+    
         if (conn && conn.open) {
             conn.send(state);
         }
