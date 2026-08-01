@@ -278,67 +278,67 @@
         requestWakeLock();
     };
 
-            function initPeer() {
-            peer = new Peer(roomId);
-        
-            peer.on('open', (id) => {
-                document.getElementById('peer-id-display').innerText = id;
-        
-                // --- PERBAIKAN GENERATE URL ADMIN UNTUK QR CODE ---
-                // Mengambil origin + path direktori saat ini
-                const protocol = window.location.protocol;
-                const host = window.location.host;
-                let pathname = window.location.pathname;
-        
-                // Hapus 'index.html' atau trailing slash jika ada
-                pathname = pathname.replace(/index\.html$/, '');
-                if (!pathname.endsWith('/')) {
-                    pathname += '/';
-                }
-        
-                // Tautkan secara presisi ke admin.html beserta parameter room
-                const adminUrl = `${protocol}//${host}${pathname}admin.html?room=${id}`;
-                // --------------------------------------------------
-        
-                // Tampilkan QR Code dengan URL yang benar
-                document.getElementById('qrcode').innerHTML = "";
-                new QRCode(document.getElementById("qrcode"), { 
-                    text: adminUrl, 
-                    width: 140, 
-                    height: 140 
-                });
-        
-                console.log("QR Admin URL Generated:", adminUrl);
-            });
-        
-            peer.on('connection', (conn) => {
-                currentConn = conn;
-                
-                // Sembunyikan overlay ketika terhubung
-                document.getElementById('pair-overlay').style.display = 'none';
-                document.getElementById('conn-status').innerText = "Admin Terhubung";
-                document.getElementById('conn-status').className = "status-badge status-online";
-        
-                conn.on('data', (data) => {
-                    renderScoreboard(data);
-                });
-        
-                // Deteksi ketika koneksi terputus
-                conn.on('close', () => {
-                    handleDisconnect();
-                });
-        
-                conn.on('error', () => {
-                    handleDisconnect();
-                });
-            });
-        
-            peer.on('disconnected', () => {
-                document.getElementById('conn-status').innerText = "Menghubungkan Ulang Server...";
-                document.getElementById('conn-status').className = "status-badge status-offline";
-                peer.reconnect();
-            });
+function initPeer() {
+    peer = new Peer(roomId);
+
+    peer.on('open', (id) => {
+        document.getElementById('peer-id-display').innerText = id;
+
+        // --- PERBAIKAN GENERATE URL ADMIN UNTUK QR CODE ---
+        // Mengambil origin + path direktori saat ini
+        const protocol = window.location.protocol;
+        const host = window.location.host;
+        let pathname = window.location.pathname;
+
+        // Hapus 'index.html' atau trailing slash jika ada
+        pathname = pathname.replace(/index\.html$/, '');
+        if (!pathname.endsWith('/')) {
+            pathname += '/';
         }
+
+        // Tautkan secara presisi ke admin.html beserta parameter room
+        const adminUrl = `${protocol}//${host}${pathname}admin.html?room=${id}`;
+        // --------------------------------------------------
+
+        // Tampilkan QR Code dengan URL yang benar
+        document.getElementById('qrcode').innerHTML = "";
+        new QRCode(document.getElementById("qrcode"), { 
+            text: adminUrl, 
+            width: 140, 
+            height: 140 
+        });
+
+        console.log("QR Admin URL Generated:", adminUrl);
+    });
+
+    peer.on('connection', (conn) => {
+        currentConn = conn;
+        
+        // Sembunyikan overlay ketika terhubung
+        document.getElementById('pair-overlay').style.display = 'none';
+        document.getElementById('conn-status').innerText = "Admin Terhubung";
+        document.getElementById('conn-status').className = "status-badge status-online";
+
+        conn.on('data', (data) => {
+            renderScoreboard(data);
+        });
+
+        // Deteksi ketika koneksi terputus
+        conn.on('close', () => {
+            handleDisconnect();
+        });
+
+        conn.on('error', () => {
+            handleDisconnect();
+        });
+    });
+
+    peer.on('disconnected', () => {
+        document.getElementById('conn-status').innerText = "Menghubungkan Ulang Server...";
+        document.getElementById('conn-status').className = "status-badge status-offline";
+        peer.reconnect();
+    });
+}
     function handleDisconnect() {
         currentConn = null;
         document.getElementById('conn-status').innerText = "Koneksi Terputus";
